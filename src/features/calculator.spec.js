@@ -1,12 +1,6 @@
-import reducer, { countDecimalPlaces, operator, number, clear } from './calculator'
+import reducer, { operator, number, clear } from './calculator'
 
 describe('Reducer for numbers', () => {
-  test('Counting decimal places should work', () => {
-    expect(countDecimalPlaces(4)).toBe(0)
-    expect(countDecimalPlaces(4.5)).toBe(1)
-    expect(countDecimalPlaces(4.55)).toBe(2)
-    expect(countDecimalPlaces(4.555)).toBe(3)
-  })
   test('It should add a number to queue', () => {
     const finalState = {
       decimal: false,
@@ -63,6 +57,30 @@ describe('Reducer for clear', () => {
     }
     expect(reducer(initialState, clear())).toEqual(finalState)
   })
+  test('It should clear trailing zeroes from the queue', () => {
+    const initialState = {
+      queue: [5],
+      decimal: true,
+      zeroes: 3
+    }
+    const finalState = {
+      queue: [],
+      decimal: false
+    }
+    expect(reducer(initialState, clear())).toEqual(finalState)
+  })
+  test('It should clear last operation', () => {
+    const initialState = {
+      queue: [15],
+      decimal: false,
+      lastOperation: ['+', 5]
+    }
+    const finalState = {
+      queue: [],
+      decimal: false
+    }
+    expect(reducer(initialState, clear())).toEqual(finalState)
+  })
 })
 
 describe('Reducer for operations', () => {
@@ -77,7 +95,7 @@ describe('Reducer for operations', () => {
     }
     expect(reducer(initialState, operator('!'))).toEqual(finalState)
   })
-  test('Ignore Empty Queue', () => {
+  test('Ignore Empty Queue w/ Invalid Input', () => {
     const initialState = {
       queue: [],
       decimal: false
@@ -87,6 +105,28 @@ describe('Reducer for operations', () => {
       decimal: false
     }
     expect(reducer(initialState, operator('!'))).toEqual(finalState)
+  })
+  test('Ignore empty queue with =', () => {
+    const initialState = {
+      queue: [],
+      decimal: false
+    }
+    const finalState = {
+      queue: [],
+      decimal: false
+    }
+    expect(reducer(initialState, operator('='))).toEqual(finalState)
+  })
+  test('Add a 0 if queue empty and operator is not =', () => {
+    const initialState = {
+      queue: [],
+      decimal: false
+    }
+    const finalState = {
+      queue: [0, '+'],
+      decimal: false
+    }
+    expect(reducer(initialState, operator('+'))).toEqual(finalState)
   })
   test('Replace last operation', () => {
     const initialState = {
@@ -205,7 +245,8 @@ describe('Reducer for operations', () => {
     }
     const finalState = {
       queue: [5],
-      decimal: false
+      decimal: false,
+      lastOperation: ['/', 4]
     }
     expect(reducer(initialState, operator('='))).toEqual(finalState)
   })
@@ -216,9 +257,25 @@ describe('Reducer for operations', () => {
     }
     const finalState = {
       queue: [10],
-      decimal: false
+      decimal: false,
+      lastOperation: ['+', 5]
     }
     expect(reducer(initialState, operator('='))).toEqual(finalState)
+  })
+  test('Equals should repeat operation without other input', () => {
+    const initialState = {
+      queue: [5, '+', 5],
+      decimal: false
+    }
+    let state = reducer(initialState, operator('='))
+    state = reducer(state, operator('='))
+    state = reducer(state, operator('='))
+    const finalState = {
+      queue: [20],
+      decimal: false,
+      lastOperation: ['+', 5]
+    }
+    expect(state).toEqual(finalState)
   })
   test('Equals (w/ one number)', () => {
     const initialState = {
@@ -241,5 +298,101 @@ describe('Reducer for operations', () => {
       decimal: true
     }
     expect(reducer(initialState, operator('.'))).toEqual(finalState)
+  })
+  test('Ignore decimal when decimals present', () => {
+    const initialState = {
+      queue: [5.125],
+      decimal: true
+    }
+    const finalState = {
+      queue: [5.125],
+      decimal: true
+    }
+    expect(reducer(initialState, operator('.'))).toEqual(finalState)
+  })
+  test('Ignore decimal when decimals present (trailing zeroes)', () => {
+    const initialState = {
+      queue: [5],
+      decimal: true,
+      zeroes: 3
+    }
+    const finalState = {
+      queue: [5],
+      decimal: true,
+      zeroes: 3
+    }
+    expect(reducer(initialState, operator('.'))).toEqual(finalState)
+  })
+  test('Zeroes after decimal', () => {
+    const initialState = {
+      queue: [5],
+      decimal: true
+    }
+    const finalState = {
+      queue: [5],
+      decimal: true,
+      zeroes: 2
+    }
+    expect(reducer(reducer(initialState, number(0)), number(0))).toEqual(finalState)
+    const finalState2 = {
+      queue: [5.001],
+      decimal: true
+    }
+    expect(reducer(finalState, number(1))).toEqual(finalState2)
+  })
+  test('Enter decimals correctly', () => {
+    const initialState = {
+      queue: [455],
+      decimal: false
+    }
+    const finalState = {
+      queue: [455.123],
+      decimal: true
+    }
+    let state = reducer(initialState, operator('.'))
+    state = reducer(state, number(1))
+    state = reducer(state, number(2))
+    state = reducer(state, number(3))
+    expect(state).toEqual(finalState)
+  })
+  test('Zeroes after decimal starting from an integer', () => {
+    const initialState = {
+      queue: [5],
+      decimal: false
+    }
+    const finalState = {
+      queue: [5],
+      decimal: true,
+      zeroes: 3
+    }
+    let state = reducer(initialState, operator('.'))
+    state = reducer(state, number(0))
+    state = reducer(state, number(0))
+    state = reducer(state, number(0))
+    expect(state).toEqual(finalState)
+    const finalState2 = {
+      queue: [5.0001],
+      decimal: true
+    }
+    state = reducer(state, number(1))
+    expect(state).toEqual(finalState2)
+  })
+  test('Clear zeroes after decimal', () => {
+    const initialState = {
+      queue: [5],
+      decimal: true,
+      zeroes: 2
+    }
+    const finalState = {
+      queue: [5, '+'],
+      decimal: true,
+      zeroes: 2
+    }
+    expect(reducer(initialState, operator('+'))).toEqual(finalState)
+    const finalState2 = {
+      queue: [5, '+', 2],
+      decimal: false
+    }
+    expect(reducer(finalState, number(2))).toEqual(finalState2)
   })
 })

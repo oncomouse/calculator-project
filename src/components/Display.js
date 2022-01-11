@@ -1,16 +1,28 @@
 import { useSelector } from 'react-redux'
 import styled from 'styled-components'
-import { pipe, prop, reduce, tap } from 'ramda'
+import { always, join, pipe, prop, propOr, reduce, times } from 'ramda'
+import countDecimalPlaces from '../utilities/countDecimalPlaces'
 
-const Component = styled.div``
+const Component = styled.h1``
+
+const listOfZeroes = pipe(
+  times(always(0)),
+  join('')
+)
+
+const format = (value, decimal, zeroes) => {
+  return countDecimalPlaces(value) > 0 ? value : `${value}${decimal ? '.' : ''}${listOfZeroes(zeroes)}`
+}
 
 const Display = (props) => {
   const value = useSelector(pipe(
     prop('queue'),
-    tap(console.log),
     reduce((acc, cur) => typeof cur === 'number' ? cur : acc, 0)
   ))
-  return (<Component>{value}</Component>)
+  const decimal = useSelector(prop('decimal'))
+  const zeroes = useSelector(propOr(0, 'zeroes'))
+  const output = format(value, decimal, zeroes)
+  return (<Component>{output}</Component>)
 }
 
 export default Display
