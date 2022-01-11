@@ -1,10 +1,10 @@
 import Decimal from 'decimal.js'
-import { curry, identity, ifElse, pipe } from 'ramda'
+import { construct, curry, identity, ifElse, invoker, pipe } from 'ramda'
 
 const instanceOf = curry((xo, x) => x instanceof xo)
 const countDecimalPlaces = pipe(
-  ifElse(instanceOf(Decimal), identity, (x) => new Decimal(x)),
-  (x) => x.decimalPlaces()
+  ifElse(instanceOf(Decimal), identity, construct(Decimal)),
+  invoker(0, 'decimalPlaces') // Call a prototype method
 )
 
 export default countDecimalPlaces
