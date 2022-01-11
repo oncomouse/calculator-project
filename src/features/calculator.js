@@ -1,6 +1,7 @@
 import { createAction, createReducer } from '@reduxjs/toolkit'
-import { add, adjust, divide, curry, isEmpty, last, max, multiply, reduce, subtract } from 'ramda'
+import { adjust, curry, isEmpty, last, max, reduce } from 'ramda'
 import countDecimalPlaces from '../utilities/countDecimalPlaces'
+import Decimal from 'decimal.js'
 
 export const clear = createAction('calculator/clear')
 export const operator = createAction('calculator/operator')
@@ -28,9 +29,12 @@ const deleteFrom = (key, obj) => { delete obj[key] }
 // Attach a number to an existing number:
 const extendNumber = curry((decimal, newNum, zeroes, num) => {
   zeroes = zeroes || 0
-  if (decimal) { // Floating point math in JavaScript is so much fun: https://stackoverflow.com/a/3644302
-    const places = countDecimalPlaces(num) + 1 + zeroes
-    return parseFloat(parseFloat(num + newNum / Math.pow(10, places)).toPrecision(places + 1))
+  if (decimal) {
+    const x = new Decimal(num)
+    const places = countDecimalPlaces(x) + 1 + zeroes
+    const y = new Decimal(newNum)
+    const z = new Decimal(Math.pow(10, places))
+    return parseFloat(x.plus(y.dividedBy((z))).toFixed(places))
   }
   return num * 10 + newNum
 })
@@ -38,15 +42,17 @@ const extendNumber = curry((decimal, newNum, zeroes, num) => {
 // Which operators do we accept?
 const ALLOWED_OPERATORS = '+-*/=.'
 
-const performOperation = (a, operation, b) => {
+const performOperation = (x, operation, y) => {
+  const a = new Decimal(x)
+  const b = new Decimal(y || x) // y||x to handle if we press equals after a number and an operator has been entered
   const counts = max(countDecimalPlaces(a), countDecimalPlaces(b))
   const result = ({
-    '+': add,
-    '-': subtract,
-    '*': multiply,
-    '/': divide
-  })[operation](a, b || a) // b||a to handle if we press equals after a number and an operator has been entered
-  return counts === 0 ? result : parseFloat(parseFloat(result).toPrecision(counts))
+    '+': (a, b) => a.plus(b).toFixed(counts),
+    '-': (a, b) => a.minus(b).toFixed(counts),
+    '*': (a, b) => a.times(b).toFixed(counts),
+    '/': (a, b) => a.dividedBy(b).toFixed(counts)
+  })[operation](a, b)
+  return parseFloat(result)
 }
 export default createReducer(initialState, (builder) => {
   builder
