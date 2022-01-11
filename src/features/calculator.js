@@ -28,13 +28,13 @@ const deleteFrom = (key, obj) => { delete obj[key] }
 
 // Attach a number to an existing number:
 const extendNumber = curry((decimal, newNum, zeroes, num) => {
-  zeroes = zeroes || 0
   if (decimal) {
+    // Convert to Decimal for calculation:
     const x = new Decimal(num)
-    const places = countDecimalPlaces(x) + 1 + zeroes
+    const places = countDecimalPlaces(x) + 1 + (zeroes || 0) // How many decimal places are we adding?
     const y = new Decimal(newNum)
     const z = new Decimal(Math.pow(10, places))
-    return parseFloat(x.plus(y.dividedBy((z))).toFixed(places))
+    return parseFloat(x.plus(y.dividedBy(z)).toFixed(places))
   }
   return num * 10 + newNum
 })
@@ -43,6 +43,7 @@ const extendNumber = curry((decimal, newNum, zeroes, num) => {
 const ALLOWED_OPERATORS = '+-*/=.'
 
 const performOperation = (x, operation, y) => {
+  // Convert to Decimal for calculation:
   const a = new Decimal(x)
   const b = new Decimal(y || x) // y||x to handle if we press equals after a number and an operator has been entered
   const counts = max(countDecimalPlaces(a), countDecimalPlaces(b))
@@ -52,6 +53,8 @@ const performOperation = (x, operation, y) => {
     '*': (a, b) => a.times(b).toFixed(counts),
     '/': (a, b) => a.dividedBy(b).toFixed(counts)
   })[operation](a, b)
+
+  // Return result as a float:
   return parseFloat(result)
 }
 export default createReducer(initialState, (builder) => {
