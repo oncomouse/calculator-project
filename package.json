@@ -27,7 +27,10 @@
       "react-app",
       "react-app/jest",
       "standard"
-    ]
+    ],
+	"rules": {
+      "no-unused-vars": "warn"
+	}
   },
   "browserslist": {
     "production": [
