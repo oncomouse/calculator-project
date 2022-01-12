@@ -1,198 +1,164 @@
 import reducer, { operator, number, clear } from './calculator'
+import { always, append, clone, evolve, update } from 'ramda'
 
+const initialState = reducer({}, clear())
 describe('Reducer for numbers', () => {
   test('It should add a number to queue', () => {
-    const finalState = {
-      decimal: false,
-      queue: [4]
-    }
-    const initialState = {
-      decimal: false,
-      queue: []
-    }
+    const finalState = evolve({
+      queue: append(4)
+    }, initialState)
     expect(reducer(initialState, number(4))).toEqual(finalState)
   })
   test('It should continue to fill out the number when numbers are applied', () => {
-    const finalState = {
-      decimal: false,
-      queue: [45]
-    }
-    const initialState = {
-      decimal: false,
-      queue: [4]
-    }
-    expect(reducer(initialState, number(5))).toEqual(finalState)
+    let state = evolve({
+      queue: append(4)
+    }, initialState)
+    state = reducer(state, number(5))
+    const finalState = evolve({
+      queue: append(45)
+    }, initialState)
+    expect(state).toEqual(finalState)
   })
   test('It should add after a decimal point if decimal is true', () => {
-    const finalState = {
-      decimal: true,
-      queue: [4.5]
-    }
-    const initialState = {
-      decimal: true,
-      queue: [4]
-    }
-    expect(reducer(initialState, number(5))).toEqual(finalState)
-    const finalState2 = {
-      decimal: true,
-      queue: [4.55]
-    }
-    const initialState2 = {
-      decimal: true,
-      queue: [4.5]
-    }
-    expect(reducer(initialState2, number(5))).toEqual(finalState2)
+    let state = evolve({
+      decimal: always(true),
+      queue: append(4)
+    }, initialState)
+    const finalState = evolve({
+      queue: update(0, 4.5)
+    }, state)
+    state = reducer(state, number(5))
+    expect(state).toEqual(finalState)
+    const finalState2 = evolve({
+      queue: update(0, 4.55)
+    }, finalState)
+    state = reducer(state, number(5))
+    expect(state).toEqual(finalState2)
   })
 })
 
 describe('Reducer for clear', () => {
   test('It should clear the queue', () => {
-    const initialState = {
-      queue: [45.3, '+', 27.5],
-      decimal: true
-    }
-    const finalState = {
-      queue: [],
-      decimal: false
-    }
-    expect(reducer(initialState, clear())).toEqual(finalState)
+    let state = evolve({
+      queue: always([45.3, '+', 27.5]),
+      decimal: always(true)
+    }, initialState)
+    state = reducer(state, clear())
+    const finalState = clone(initialState)
+    expect(state).toEqual(finalState)
   })
   test('It should clear trailing zeroes from the queue', () => {
-    const initialState = {
-      queue: [5],
-      decimal: true,
-      zeroes: 3
-    }
-    const finalState = {
-      queue: [],
-      decimal: false
-    }
-    expect(reducer(initialState, clear())).toEqual(finalState)
+    let state = evolve({
+      queue: always([5]),
+      decimal: always(true),
+      zeroes: always(3)
+    }, initialState)
+    state = reducer(state, clear())
+    const finalState = clone(initialState)
+    expect(state).toEqual(finalState)
   })
   test('It should clear last operation', () => {
-    const initialState = {
-      queue: [15],
-      decimal: false,
-      lastOperation: ['+', 5]
-    }
-    const finalState = {
-      queue: [],
-      decimal: false
-    }
-    expect(reducer(initialState, clear())).toEqual(finalState)
+    let state = evolve({
+      queue: always([15]),
+      decimal: always(false),
+      lastOperation: always(['+', 5])
+    }, initialState)
+    state = reducer(state, clear())
+    const finalState = clone(initialState)
+    expect(state).toEqual(finalState)
   })
 })
 
 describe('Reducer for operations', () => {
   test('Ignore Invalid Operation', () => {
-    const initialState = {
-      queue: [4],
-      decimal: true
-    }
-    const finalState = {
-      queue: [4],
-      decimal: true
-    }
-    expect(reducer(initialState, operator('!'))).toEqual(finalState)
+    let state = evolve({
+      queue: append(4),
+      decimal: always(true)
+    }, initialState)
+    const finalState = clone(state)
+    state = reducer(state, operator('!'))
+    expect(state).toEqual(finalState)
   })
   test('Ignore Empty Queue w/ Invalid Input', () => {
-    const initialState = {
-      queue: [],
-      decimal: false
-    }
-    const finalState = {
-      queue: [],
-      decimal: false
-    }
-    expect(reducer(initialState, operator('!'))).toEqual(finalState)
+    let state = clone(initialState)
+    const finalState = clone(initialState)
+    state = reducer(state, operator('!'))
+    expect(state).toEqual(finalState)
   })
   test('Ignore empty queue with =', () => {
-    const initialState = {
-      queue: [],
-      decimal: false
-    }
-    const finalState = {
-      queue: [],
-      decimal: false
-    }
-    expect(reducer(initialState, operator('='))).toEqual(finalState)
+    let state = clone(initialState)
+    const finalState = clone(initialState)
+    state = reducer(state, operator('='))
+    expect(state).toEqual(finalState)
   })
   test('Add a 0 if queue empty and operator is not =', () => {
-    const initialState = {
-      queue: [],
-      decimal: false
-    }
-    const finalState = {
-      queue: [0, '+'],
-      decimal: false
-    }
-    expect(reducer(initialState, operator('+'))).toEqual(finalState)
+    let state = clone(initialState)
+    const finalState = evolve({
+      queue: always([0, '+'])
+    }, initialState)
+    state = reducer(state, operator('+'))
+    expect(state).toEqual(finalState)
   })
   test('Replace last operation', () => {
-    const initialState = {
-      queue: [4, '*'],
-      decimal: false
-    }
-    const finalState = {
-      queue: [4, '+'],
-      decimal: false
-    }
-    expect(reducer(initialState, operator('+'))).toEqual(finalState)
+    let state = evolve({
+      queue: always([4, '*'])
+    }, initialState)
+    const finalState = evolve({
+      queue: update(-1, '+')
+    }, state)
+    state = reducer(state, operator('+'))
+    expect(state).toEqual(finalState)
   })
   test('Decimal point after operator', () => {
-    const initialState = {
-      queue: [4, '*'],
-      decimal: false
-    }
-    const finalState = {
-      queue: [4, '*', 0],
-      decimal: true
-    }
-    expect(reducer(initialState, operator('.'))).toEqual(finalState)
+    let state = evolve({
+      queue: always([4, '*'])
+    }, initialState)
+    const finalState = evolve({
+      queue: append(0),
+      decimal: always(true)
+    }, state)
+    state = reducer(state, operator('.'))
+    expect(state).toEqual(finalState)
   })
   test('Addition (operation)', () => {
-    const initialState = {
-      queue: [4],
-      decimal: false
-    }
-    const finalState = {
-      queue: [4, '+'],
-      decimal: false
-    }
-    expect(reducer(initialState, operator('+'))).toEqual(finalState)
+    let state = evolve({
+      queue: append(4)
+    }, initialState)
+    const finalState = evolve({
+      queue: append('+')
+    }, state)
+    state = reducer(state, operator('+'))
+    expect(state).toEqual(finalState)
   })
   test('Subtraction (operation)', () => {
-    const initialState = {
-      queue: [5],
-      decimal: false
-    }
-    const finalState = {
-      queue: [5, '-'],
-      decimal: false
-    }
-    expect(reducer(initialState, operator('-'))).toEqual(finalState)
+    let state = evolve({
+      queue: append(4)
+    }, initialState)
+    const finalState = evolve({
+      queue: append('-')
+    }, state)
+    state = reducer(state, operator('-'))
+    expect(state).toEqual(finalState)
   })
   test('Multiplication (operation)', () => {
-    const initialState = {
-      queue: [5],
-      decimal: false
-    }
-    const finalState = {
-      queue: [5, '*'],
-      decimal: false
-    }
-    expect(reducer(initialState, operator('*'))).toEqual(finalState)
+    let state = evolve({
+      queue: append(4)
+    }, initialState)
+    const finalState = evolve({
+      queue: append('*')
+    }, state)
+    state = reducer(state, operator('*'))
+    expect(state).toEqual(finalState)
   })
   test('Division (operation)', () => {
-    const initialState = {
-      queue: [5],
-      decimal: false
-    }
-    const finalState = {
-      queue: [5, '/'],
-      decimal: false
-    }
-    expect(reducer(initialState, operator('/'))).toEqual(finalState)
+    let state = evolve({
+      queue: append(4)
+    }, initialState)
+    const finalState = evolve({
+      queue: append('/')
+    }, state)
+    state = reducer(state, operator('/'))
+    expect(state).toEqual(finalState)
   })
   test('Addition (calculation)', () => {
     const initialState = {
