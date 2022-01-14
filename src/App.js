@@ -21,8 +21,11 @@ function App () {
       <ThemeProvider theme={theme}>
         <Component>
           <KeyHandler />
-          <ClearButton>C</ClearButton>
           <Display />
+          <ClearButton value={true}>AC</ClearButton>
+          <ClearButton value={false}>C</ClearButton>
+          <OperatorButton value="-">-</OperatorButton>
+          <OperatorButton value="/">/</OperatorButton>
           <NumberButton value={7}>7</NumberButton>
           <NumberButton value={8}>8</NumberButton>
           <NumberButton value={9}>9</NumberButton>

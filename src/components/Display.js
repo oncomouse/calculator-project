@@ -4,8 +4,11 @@ import { always, join, pipe, prop, propOr, reduce, times } from 'ramda'
 import countDecimalPlaces from '../utilities/countDecimalPlaces'
 
 const Component = styled.h1`
-  grid-column-end: span 3;
+  grid-column-end: span 4;
   display: inline-grid;
+  font-size: 8rem;
+  font-weight: normal;
+  margin: 0;
 `
 
 const listOfZeroes = pipe(
