@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/react'
 import { Provider } from 'react-redux'
 import '@testing-library/jest-dom'
 import Button from './Button.js'
-import { store } from '../store'
+import { store } from '../features/store'
 
 describe('<Button /> Component', () => {
   test('Renders', () => {

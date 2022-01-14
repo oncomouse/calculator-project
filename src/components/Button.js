@@ -5,7 +5,7 @@ import { number, operator, clear } from '../features/calculator'
 const ButtonComponent = styled.button`
   display: inline-grid;
   height: 5rem;
-  width: ${props => (props.width || 1) * 5}rem;
+  width: ${props => (props.width || 1) * 5 + (props.width - 1 || 0) * props.theme.gridGap}rem;
   font-size: 3.5rem;
   grid-column-end: span ${props => (props.width || 1)};
 `

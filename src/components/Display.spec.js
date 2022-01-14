@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/react'
 import { Provider } from 'react-redux'
 import '@testing-library/jest-dom'
 import Display from './Display.js'
-import { store } from '../store'
+import { store } from '../features/store'
 import { clear, number, operator } from '../features/calculator'
 
 describe('<Display /> tests', () => {
