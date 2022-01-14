@@ -2,11 +2,17 @@ import { useDispatch } from 'react-redux'
 import styled from 'styled-components'
 import { number, operator, clear } from '../features/calculator'
 
-const ButtonComponent = styled.button``
+const ButtonComponent = styled.button`
+  display: inline-grid;
+  height: 5rem;
+  width: ${props => (props.width || 1) * 5}rem;
+  font-size: 3.5rem;
+  grid-column-end: span ${props => (props.width || 1)};
+`
 
 const Button = (props) => {
   const dispatch = useDispatch()
-  return (<ButtonComponent onClick={() => dispatch(props.actionCreator(props.value))}>{props.children}</ButtonComponent>)
+  return (<ButtonComponent onClick={() => dispatch(props.actionCreator(props.value))} {...props}>{props.children}</ButtonComponent>)
 }
 
 export const NumberButton = (props) => {

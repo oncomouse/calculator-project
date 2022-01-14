@@ -3,7 +3,10 @@ import styled from 'styled-components'
 import { always, join, pipe, prop, propOr, reduce, times } from 'ramda'
 import countDecimalPlaces from '../utilities/countDecimalPlaces'
 
-const Component = styled.h1``
+const Component = styled.h1`
+  grid-column-end: span 3;
+  display: inline-grid;
+`
 
 const listOfZeroes = pipe(
   times(always(0)),
