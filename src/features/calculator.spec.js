@@ -1,7 +1,7 @@
 import reducer, { operator, number, clear } from './calculator'
 import { always, append, clone, evolve, update } from 'ramda'
 
-const initialState = reducer({}, clear())
+const initialState = reducer({}, clear(true))
 describe('Reducer for numbers', () => {
   test('It should add a number to queue', () => {
     const finalState = evolve({
@@ -38,12 +38,24 @@ describe('Reducer for numbers', () => {
 })
 
 describe('Reducer for clear', () => {
-  test('It should clear the queue', () => {
+  test('It should clear the last number', () => {
     let state = evolve({
       queue: always([45.3, '+', 27.5]),
       decimal: always(true)
     }, initialState)
-    state = reducer(state, clear())
+    state = reducer(state, clear(false))
+    const finalState = evolve({
+      queue: always([45.3, '+']),
+      decimal: always(false)
+    }, initialState)
+    expect(state).toEqual(finalState)
+  })
+  test('It should clear the queue with all clear', () => {
+    let state = evolve({
+      queue: always([45.3, '+', 27.5]),
+      decimal: always(true)
+    }, initialState)
+    state = reducer(state, clear(true))
     const finalState = clone(initialState)
     expect(state).toEqual(finalState)
   })
@@ -57,13 +69,27 @@ describe('Reducer for clear', () => {
     const finalState = clone(initialState)
     expect(state).toEqual(finalState)
   })
+  test('It should clear trailing zeroes from the queue when clearing last number', () => {
+    let state = evolve({
+      queue: always([5, '+', 6]),
+      decimal: always(true),
+      zeroes: always(3)
+    }, initialState)
+    state = reducer(state, clear())
+    const finalState = evolve({
+      queue: always([5, '+']),
+      decimal: always(false)
+    }, initialState)
+
+    expect(state).toEqual(finalState)
+  })
   test('It should clear last operation', () => {
     let state = evolve({
       queue: always([15]),
       decimal: always(false),
       lastOperation: always(['+', 5])
     }, initialState)
-    state = reducer(state, clear())
+    state = reducer(state, clear(true))
     const finalState = clone(initialState)
     expect(state).toEqual(finalState)
   })

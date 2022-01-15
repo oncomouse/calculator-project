@@ -1,5 +1,5 @@
 import { createAction, createReducer } from '@reduxjs/toolkit'
-import { adjust, curry, isEmpty, last, max, reduce } from 'ramda'
+import { adjust, curry, dropLast, isEmpty, last, max, reduce } from 'ramda'
 import countDecimalPlaces from '../utilities/countDecimalPlaces'
 import Decimal from 'decimal.js'
 
@@ -78,11 +78,17 @@ export default createReducer(initialState, (builder) => {
         state.queue.push(action.payload)
       }
     })
-    .addCase(clear, (state) => {
-      state.queue = []
-      state.decimal = false
-      deleteFrom('zeroes', state)
-      deleteFrom('lastOperation', state)
+    .addCase(clear, (state, action) => {
+      if (action.payload) {
+        state.queue = []
+        state.decimal = false
+        deleteFrom('zeroes', state)
+        deleteFrom('lastOperation', state)
+      } else if (state.queue.length > 0 && typeof last(state.queue) === 'number') {
+        state.decimal = false
+        state.queue = dropLast(1, state.queue)
+        deleteFrom('zeroes', state)
+      }
     })
     .addCase(operator, (state, action) => {
       if (ALLOWED_OPERATORS.indexOf(action.payload) >= 0) {

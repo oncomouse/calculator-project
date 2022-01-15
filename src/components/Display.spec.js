@@ -10,7 +10,7 @@ describe('<Display /> tests', () => {
     render(<Provider store={store}>
       <Display />
     </Provider>)
-    store.dispatch(clear()) // Make sure there's nothing in queue
+    store.dispatch(clear(true)) // Make sure there's nothing in queue
     store.dispatch(number(7))
     expect(screen.getByRole('heading')).toHaveTextContent('7')
     store.dispatch(number(5))
@@ -26,7 +26,7 @@ describe('<Display /> tests', () => {
     render(<Provider store={store}>
       <Display />
     </Provider>)
-    store.dispatch(clear()) // Make sure there's nothing in queue
+    store.dispatch(clear(true)) // Make sure there's nothing in queue
     store.dispatch(number(7))
     store.dispatch(operator('.'))
     expect(screen.getByRole('heading')).toHaveTextContent('7.')
@@ -35,7 +35,7 @@ describe('<Display /> tests', () => {
     render(<Provider store={store}>
       <Display />
     </Provider>)
-    store.dispatch(clear()) // Make sure there's nothing in queue
+    store.dispatch(clear(true)) // Make sure there's nothing in queue
     store.dispatch(number(7))
     store.dispatch(operator('.'))
     store.dispatch(number(0))
@@ -48,7 +48,7 @@ describe('<Display /> tests', () => {
     render(<Provider store={store}>
       <Display />
     </Provider>)
-    store.dispatch(clear()) // Make sure there's nothing in queue
+    store.dispatch(clear(true)) // Make sure there's nothing in queue
     store.dispatch(number(7))
     store.dispatch(operator('.'))
     store.dispatch(number(0))
@@ -61,11 +61,11 @@ describe('<Display /> tests', () => {
     render(<Provider store={store}>
       <Display />
     </Provider>)
-    store.dispatch(clear()) // Make sure there's nothing in queue
+    store.dispatch(clear(true)) // Make sure there's nothing in queue
     store.dispatch(number(7))
     store.dispatch(operator('+'))
     store.dispatch(number(7))
-    store.dispatch(clear())
+    store.dispatch(clear(true))
     expect(screen.getByRole('heading')).toHaveTextContent('0')
   })
 })
