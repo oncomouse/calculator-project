@@ -1,7 +1,6 @@
+import { evaluate } from 'mathjs'
 import { createAction, createReducer } from '@reduxjs/toolkit'
-import { adjust, curry, dropLast, isEmpty, last, max, reduce } from 'ramda'
-import countDecimalPlaces from '../utilities/countDecimalPlaces'
-import Decimal from 'decimal.js'
+import { __, adjust, always, gte, indexOf, init, not, nth, slice, split, test, pipe } from 'ramda'
 
 export const clear = createAction('calculator/clear')
 export const operator = createAction('calculator/operator')
@@ -13,124 +12,116 @@ export const actions = {
 }
 
 const initialState = {
-  decimal: false,
-  queue: []
+  queue: '0'
 }
 
-const lastNumber = reduce((acc, cur) => (typeof cur === 'number') ? cur : acc, null)
-const lastString = reduce((acc, cur) => (typeof cur === 'string') ? cur : acc, null)
-const extractLastOperation = (queue) => ([
-  lastString(queue),
-  lastNumber(queue)
-])
-
-const deleteFrom = (key, obj) => { delete obj[key] }
-
-// Attach a number to an existing number:
-const extendNumber = curry((decimal, newNum, zeroes, num) => {
-  if (decimal) {
-    // Convert to Decimal for calculation:
-    const x = new Decimal(num)
-    const places = countDecimalPlaces(x) + 1 + (zeroes || 0) // How many decimal places are we adding?
-    const y = new Decimal(newNum)
-    const z = new Decimal(Math.pow(10, places))
-    return parseFloat(x.plus(y.dividedBy(z)).toFixed(places))
-  }
-  return num * 10 + newNum
-})
+const splitQueue = split(' ')
 
 // Which operators do we accept?
-const ALLOWED_OPERATORS = '+-*/=.'
+const ALLOWED_OPERATORS = '+-*/%=.±'
 
-const performOperation = (x, operation, y) => {
-  // Convert to Decimal for calculation:
-  const a = new Decimal(x)
-  const b = new Decimal(y || x) // y||x to handle if we press equals after a number and an operator has been entered
-  const counts = max(countDecimalPlaces(a), countDecimalPlaces(b))
-  const result = ({
-    '+': (a, b) => a.plus(b).toFixed(counts),
-    '-': (a, b) => a.minus(b).toFixed(counts),
-    '*': (a, b) => a.times(b).toFixed(counts),
-    '/': (a, b) => a.dividedBy(b).toFixed(counts)
-  })[operation](a, b)
+export const isOperator = pipe(
+  indexOf(__, ALLOWED_OPERATORS),
+  gte(__, 0)
+)
 
-  // Return result as a float:
-  return parseFloat(result)
-}
+export const isNumber = test(/^-{0,1}[0-9]+\.{0,1}[0-9]*$/)
+
 export default createReducer(initialState, (builder) => {
   builder
     .addCase(number, (state, action) => {
-      if (isEmpty(state.queue)) {
-        state.queue.push(action.payload)
-      } else if (typeof last(state.queue) === 'number') {
-        if (state.decimal && countDecimalPlaces(last(state.queue)) === 0 && action.payload === 0) {
-          state.zeroes = typeof state.zeroes === 'undefined' ? 1 : state.zeroes + 1
-        } else {
-          state.queue = adjust(-1, extendNumber(state.decimal, action.payload, state.zeroes), state.queue)
-          if (state.decimal && countDecimalPlaces(last(state.queue)) > 0) {
-            deleteFrom('zeroes', state)
-          }
-        }
+      const queue = splitQueue(state.queue)
+      if (state.queue.length === 0) {
+        state.queue = action.payload.toString()
+      // Last item is an operator, start a new number:
+      } else if (isOperator(nth(-1, queue))) {
+        state.queue = state.queue += ' ' + action.payload.toString()
+      // If there's a solution currently displayed, replace the whole queue with the new number:
+      } else if (queue.length > 2 && nth(-2, queue) === '=') {
+        state.queue = action.payload.toString()
+      // If there's a zero, replace it:
+      } else if (nth(-1, queue) === '0') {
+        state.queue = adjust(-1, always(action.payload.toString()), queue).join(' ')
+      // Otherwise, adjust the number by appending it to the last string:
       } else {
-        deleteFrom('zeroes', state)
-        deleteFrom('lastOperation', state)
-        state.decimal = false
-        state.queue.push(action.payload)
+        state.queue = adjust(-1, xs => xs + action.payload.toString(), queue).join(' ')
       }
     })
     .addCase(clear, (state, action) => {
       if (action.payload) {
-        state.queue = []
-        state.decimal = false
-        deleteFrom('zeroes', state)
-        deleteFrom('lastOperation', state)
-      } else if (state.queue.length > 0 && typeof last(state.queue) === 'number') {
-        state.decimal = false
-        state.queue = dropLast(1, state.queue)
-        deleteFrom('zeroes', state)
+        state.queue = initialState.queue
+      } else {
+        const queue = splitQueue(state.queue)
+        if (isNumber(nth(-1, queue))) {
+          state.queue = queue.slice(0, -1).join(' ') + ' 0'
+        }
       }
     })
     .addCase(operator, (state, action) => {
-      if (ALLOWED_OPERATORS.indexOf(action.payload) >= 0) {
-        if (isEmpty(state.queue)) { // If queue is empty and any operation but = is prssed, add a zero and continue operator processing
-          if (action.payload === '=') {
-            return
-          }
-          state.queue = [0]
+      if (not(isOperator(action.payload))) {
+        return
+      }
+      if (state.queue.length === 0 && action.payload !== '=') {
+        state.queue = '0'
+      }
+      const queue = splitQueue(state.queue)
+      if (action.payload === '.') {
+        const lastQueueItem = nth(-1, queue)
+        if (isOperator(lastQueueItem)) {
+          state.queue += ' 0.'
+        } else if (lastQueueItem.indexOf('.') < 0) {
+          state.queue += '.'
         }
-        if (typeof last(state.queue) === 'number') {
-          if (action.payload === '.') { // Trigger decimal:
-            if (countDecimalPlaces(last(state.queue)) === 0 && typeof state.zeroes === 'undefined') {
-              state.decimal = !state.decimal
+      } else if (action.payload === '=') {
+        // Queue is of the form of <number> <operation>
+        if (queue.length === 2) {
+          const firstItem = nth(-2, queue)
+          const secondItem = nth(-1, queue)
+          if (isNumber(firstItem) && isOperator(secondItem)) {
+            state.queue += ` ${firstItem} = ${evaluate(`${firstItem} ${secondItem} ${firstItem}`)}`
+          }
+        // At least three items:
+        } else if (queue.length > 2) {
+          const firstItem = nth(-3, queue)
+          const secondItem = nth(-2, queue)
+          const thirdItem = nth(-1, queue)
+          if (isNumber(firstItem) && isOperator(secondItem) && isNumber(thirdItem)) {
+            // This is a straight-forward a +-/* b calculation:
+            if (secondItem !== '=') {
+              state.queue += ` = ${evaluate(`${firstItem} ${secondItem} ${thirdItem}`)}`
+            // Handle recurring operations. This had to be worked out by trial and error:
+            } else if (queue.length >= 4) {
+              const fourthItem = nth(-4, queue)
+              state.queue += ` ${fourthItem} ${firstItem} = ${evaluate(`${firstItem} ${fourthItem} ${thirdItem}`)}`
             }
-          } else if (state.queue.length === 3) { // Trigger an operation:
-            state.lastOperation = extractLastOperation(state.queue)
-            state.queue = [
-              performOperation(...state.queue)
-            ]
-            state.decimal = false
-          } else if (state.lastOperation && action.payload === '=') { // If we have a number and a last operation, do that if = is pressed:
-            state.queue = [
-              performOperation(last(state.queue), state.lastOperation[0], state.lastOperation[1])
-            ]
           }
-          if (action.payload !== '=' && action.payload !== '.') { // Add a new action:
-            state.queue.push(action.payload)
-            deleteFrom('lastOperation', state)
+        }
+      // Handle positive/negative:
+      } else if (action.payload === '±') {
+        const lastQueueItem = nth(-1, queue)
+        if (isNumber(lastQueueItem)) {
+          if (lastQueueItem.indexOf('-') === 0) {
+            state.queue = adjust(-1, slice(1), queue).join(' ')
+          } else {
+            state.queue = adjust(-1, always('-' + lastQueueItem), queue).join(' ')
           }
-        } else { // Operator pressed after operator:
-          if (action.payload === '.') { // Push a zero and turn on decimal:
-            state.queue.push(0)
-            state.decimal = true
-          } else if (action.payload === '=') { // Can perform operations of the form 5+= (is 5+5=)
-            state.lastOperation = extractLastOperation(state.queue)
-            state.queue = [
-              performOperation(...state.queue) // This may be too cute, but performOperation can handle a number and an operator
-            ]
-            state.decimal = false
-          } else { // Replace previous operator:
-            state.queue[1] = action.payload
+        }
+      } else {
+        const lastQueueItem = nth(-1, queue)
+        // Replace last operator:
+        if (isOperator(lastQueueItem) && lastQueueItem !== '=') {
+          state.queue = adjust(-1, always(action.payload), queue).join(' ')
+        } else {
+          // If we already have an equals in the chain, split and calculate for the part after it:
+          if (state.queue.indexOf('=') >= 0) {
+            const parts = state.queue.split(' = ')
+            state.queue = init(parts).join(' = ') + ' = ' + evaluate(nth(-1, parts))
+          // Otherwise, calculate the whole queue:
+          } else {
+            state.queue = evaluate(state.queue)
           }
+          // Then add on the new operation:
+          state.queue += ' ' + action.payload
         }
       }
     })
