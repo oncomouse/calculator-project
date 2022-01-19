@@ -5,6 +5,7 @@
   "dependencies": {
     "@reduxjs/toolkit": "^1.7.1",
     "@testing-library/user-event": "^13.5.0",
+    "colors": "^1.4.0",
     "decimal.js": "^10.3.1",
     "mathjs": "^10.1.0",
     "polished": "^4.1.3",
