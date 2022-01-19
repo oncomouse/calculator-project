@@ -1,6 +1,6 @@
 import { evaluate } from 'mathjs'
 import { createAction, createReducer } from '@reduxjs/toolkit'
-import { __, adjust, always, append, gte, indexOf, init, not, nth, slice, split, test, pipe } from 'ramda'
+import { __, adjust, always, concat, gte, indexOf, lastIndexOf, not, nth, slice, split, test, pipe } from 'ramda'
 
 export const clear = createAction('calculator/clear')
 export const operator = createAction('calculator/operator')
@@ -31,13 +31,13 @@ export default createReducer(initialState, (builder) => {
   builder
     .addCase(number, (state, action) => {
       if (state.queue.length === 0) {
-        state.queue = action.payload.toString()
+        state.queue = [action.payload.toString()]
       // Last item is an operator, start a new number:
       } else if (isOperator(nth(-1, state.queue))) {
-        state.queue = state.queue.push(action.payload.toString())
+        state.queue.push(action.payload.toString())
       // If there's a solution currently displayed, replace the whole state.queue with the new number:
       } else if (state.queue.length > 2 && nth(-2, state.queue) === '=') {
-        state.queue = action.payload.toString()
+        state.queue = [action.payload.toString()]
       // If there's a zero, replace it:
       } else if (nth(-1, state.queue) === '0') {
         state.queue = adjust(-1, always(action.payload.toString()), state.queue)
@@ -51,7 +51,8 @@ export default createReducer(initialState, (builder) => {
         state.queue = initialState.queue
       } else {
         if (isNumber(nth(-1, state.queue))) {
-          state.queue = state.queue.slice(0, -1).push('0')
+          state.queue = state.queue.slice(0, -1)
+          state.queue.push('0')
         }
       }
     })
@@ -67,8 +68,7 @@ export default createReducer(initialState, (builder) => {
         if (isOperator(lastQueueItem)) {
           state.queue.push('0.')
         } else if (lastQueueItem.indexOf('.') < 0) {
-          // state.queue.push('.')
-          state.queue = adjust(-1, append('.'), state.queue)
+          state.queue = adjust(-1, xs => xs + '.', state.queue)
         }
       } else if (action.payload === '=') {
         // Queue is of the form of <number> <operation>
@@ -76,7 +76,7 @@ export default createReducer(initialState, (builder) => {
           const firstItem = nth(-2, state.queue)
           const secondItem = nth(-1, state.queue)
           if (isNumber(firstItem) && isOperator(secondItem)) {
-            state.queue.push(` ${firstItem} = ${evaluate(`${firstItem} ${secondItem} ${firstItem}`)}`)
+            state.queue = concat(state.queue, [firstItem, '=', evaluate(`${firstItem} ${secondItem} ${firstItem}`).toString()])
           }
         // At least three items:
         } else if (state.queue.length > 2) {
@@ -86,11 +86,11 @@ export default createReducer(initialState, (builder) => {
           if (isNumber(firstItem) && isOperator(secondItem) && isNumber(thirdItem)) {
             // This is a straight-forward a +-/* b calculation:
             if (secondItem !== '=') {
-              state.queue.push(` = ${evaluate(`${firstItem} ${secondItem} ${thirdItem}`)}`)
+              state.queue = concat(state.queue, ['=', evaluate(`${firstItem} ${secondItem} ${thirdItem}`).toString()])
             // Handle recurring operations. This had to be worked out by trial and error:
             } else if (state.queue.length >= 4) {
               const fourthItem = nth(-4, state.queue)
-              state.queue.push(` ${fourthItem} ${firstItem} = ${evaluate(`${firstItem} ${fourthItem} ${thirdItem}`)}`)
+              state.queue = concat(state.queue, [fourthItem, firstItem, '=', evaluate(`${firstItem} ${fourthItem} ${thirdItem}`).toString()])
             }
           }
         }
@@ -112,14 +112,16 @@ export default createReducer(initialState, (builder) => {
         } else {
           // If we already have an equals in the chain, split and calculate for the part after it:
           if (state.queue.indexOf('=') >= 0) {
-            const parts = state.queue.split(' = ')
-            state.queue = init(parts).join(' = ') + ' = ' + evaluate(nth(-1, parts))
+            // const parts = state.queue.split(' = ')
+            const position = lastIndexOf('=', state.queue)
+            state.queue = concat(state.queue.slice(0, position), ['=', evaluate(state.queue.slice(position + 1).join(' ')).toString()])
+            // state.queue = init(parts).join(' = ') + ' = ' + evaluate(nth(-1, parts))
           // Otherwise, calculate the whole state.queue:
           } else {
-            state.queue = evaluate(state.queue)
+            state.queue = [evaluate(state.queue.join(' ')).toString()]
           }
           // Then add on the new operation:
-          state.queue.push(' ' + action.payload)
+          state.queue.push(action.payload)
         }
       }
     })
