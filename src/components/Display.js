@@ -1,6 +1,6 @@
 import { useSelector } from 'react-redux'
 import styled from 'styled-components'
-import { pipe, prop, reduce, split } from 'ramda'
+import { pipe, prop, reduce } from 'ramda'
 import { isNumber } from '../features/calculator'
 
 const Component = styled.h1`
@@ -14,7 +14,6 @@ const Component = styled.h1`
 const Display = (props) => {
   const value = useSelector(pipe(
     prop('queue'),
-    split(' '),
     reduce((acc, cur) => (isNumber(cur) ? cur : acc), '0')
   ))
   return (<Component>{value}</Component>)
