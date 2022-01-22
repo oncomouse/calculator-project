@@ -22,7 +22,7 @@ function App () {
         <Component>
           <KeyHandler />
           <Display />
-          <ClearButton value={true}>AC</ClearButton>
+          <ClearButton value={true} small={true}>AC</ClearButton>
           <ClearButton value={false}>C</ClearButton>
           <OperatorButton value="±">±</OperatorButton>
           <OperatorButton value="/">/</OperatorButton>
