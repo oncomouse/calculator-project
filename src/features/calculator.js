@@ -60,9 +60,6 @@ export default createReducer(initialState, (builder) => {
       if (not(isOperator(action.payload))) {
         return
       }
-      if (state.queue.length === 0 && action.payload !== '=') {
-        state.queue = ['0']
-      }
       if (action.payload === '.') {
         const lastQueueItem = nth(-1, state.queue)
         if (isOperator(lastQueueItem)) {
