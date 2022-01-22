@@ -1,6 +1,6 @@
 import { evaluate } from 'mathjs'
 import { createAction, createReducer } from '@reduxjs/toolkit'
-import { __, adjust, always, concat, gte, indexOf, lastIndexOf, not, nth, slice, test, pipe } from 'ramda'
+import { __, adjust, always, concat, equals, gte, indexOf, lastIndexOf, not, nth, slice, test, pipe, where } from 'ramda'
 
 export const clear = createAction('calculator/clear')
 export const operator = createAction('calculator/operator')
@@ -23,10 +23,16 @@ export const isOperator = pipe(
   gte(__, 0)
 )
 
+const matchOperator = xs => where({
+  type: equals(operator.type),
+  payload: equals(xs)
+})
+
 export const isNumber = test(/^-{0,1}[0-9]+\.{0,1}[0-9]*$/)
 
 export default createReducer(initialState, (builder) => {
   builder
+    // === Numbers ===
     .addCase(number, (state, action) => {
       if (state.queue.length === 0) {
         state.queue = [action.payload.toString()]
@@ -44,6 +50,7 @@ export default createReducer(initialState, (builder) => {
         state.queue = adjust(-1, xs => xs + action.payload.toString(), state.queue)
       }
     })
+    // === Clear ===
     .addCase(clear, (state, action) => {
       if (action.payload) {
         state.queue = initialState.queue
@@ -54,7 +61,11 @@ export default createReducer(initialState, (builder) => {
         }
       }
     })
-    .addMatcher(action => action.payload === '.', (state, action) => {
+    // === Operators ===
+    // Noop for invalid actions and invalid operators:
+    .addMatcher(action => action.type !== operator.type || not(isOperator(action.payload)), () => {})
+    // Handle decimal operator:
+    .addMatcher(matchOperator('.'), (state, action) => {
       const lastQueueItem = nth(-1, state.queue)
       if (isOperator(lastQueueItem)) {
         state.queue.push('0.')
@@ -62,7 +73,19 @@ export default createReducer(initialState, (builder) => {
         state.queue = adjust(-1, xs => xs + '.', state.queue)
       }
     })
-    .addMatcher(action => action.payload === '=', (state, action) => {
+    // Handle negation operator:
+    .addMatcher(matchOperator('±'), (state, action) => {
+      const lastQueueItem = nth(-1, state.queue)
+      if (isNumber(lastQueueItem)) {
+        if (lastQueueItem.indexOf('-') === 0) {
+          state.queue = adjust(-1, slice(1), state.queue)
+        } else {
+          state.queue = adjust(-1, always('-' + lastQueueItem), state.queue)
+        }
+      }
+    })
+    // Handle equals operator:
+    .addMatcher(matchOperator('='), (state, action) => {
       // Queue is of the form of <number> <operation>
       if (state.queue.length === 2) {
         const firstItem = nth(-2, state.queue)
@@ -87,20 +110,8 @@ export default createReducer(initialState, (builder) => {
         }
       }
     })
-    .addMatcher(action => action.payload === '±', (state, action) => {
-      const lastQueueItem = nth(-1, state.queue)
-      if (isNumber(lastQueueItem)) {
-        if (lastQueueItem.indexOf('-') === 0) {
-          state.queue = adjust(-1, slice(1), state.queue)
-        } else {
-          state.queue = adjust(-1, always('-' + lastQueueItem), state.queue)
-        }
-      }
-    })
+    // All that remains are to handle mathematical operators
     .addDefaultCase((state, action) => {
-      if (action.type !== operator.type || not(isOperator(action.payload))) {
-        return
-      }
       const lastQueueItem = nth(-1, state.queue)
       // Replace last operator:
       if (isOperator(lastQueueItem) && lastQueueItem !== '=') {
