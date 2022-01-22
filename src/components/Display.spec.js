@@ -6,11 +6,13 @@ import MinimalApp from './MinimalApp.js'
 import { clear, number, operator } from '../features/calculator'
 
 describe('<Display /> tests', () => {
+  beforeEach(() => {
+    store.dispatch(clear(true)) // Make sure there's nothing in queue
+  })
   test('Should render the last number in the queue', () => {
     render(<MinimalApp>
       <Display />
     </MinimalApp>)
-    store.dispatch(clear(true)) // Make sure there's nothing in queue
     store.dispatch(number(7))
     expect(screen.getByRole('heading')).toHaveTextContent('7')
     store.dispatch(number(5))
@@ -26,7 +28,6 @@ describe('<Display /> tests', () => {
     render(<MinimalApp>
       <Display />
     </MinimalApp>)
-    store.dispatch(clear(true)) // Make sure there's nothing in queue
     store.dispatch(number(7))
     store.dispatch(operator('.'))
     expect(screen.getByRole('heading')).toHaveTextContent('7.')
@@ -35,7 +36,6 @@ describe('<Display /> tests', () => {
     render(<MinimalApp>
       <Display />
     </MinimalApp>)
-    store.dispatch(clear(true)) // Make sure there's nothing in queue
     store.dispatch(number(7))
     store.dispatch(operator('.'))
     store.dispatch(number(0))
@@ -48,7 +48,6 @@ describe('<Display /> tests', () => {
     render(<MinimalApp>
       <Display />
     </MinimalApp>)
-    store.dispatch(clear(true)) // Make sure there's nothing in queue
     store.dispatch(number(7))
     store.dispatch(operator('.'))
     store.dispatch(number(0))
@@ -61,7 +60,6 @@ describe('<Display /> tests', () => {
     render(<MinimalApp>
       <Display />
     </MinimalApp>)
-    store.dispatch(clear(true)) // Make sure there's nothing in queue
     store.dispatch(number(7))
     store.dispatch(operator('+'))
     store.dispatch(number(7))
